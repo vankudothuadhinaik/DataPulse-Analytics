@@ -16,6 +16,8 @@ function App() {
   useEffect(() => {
     const controller = new AbortController();
     const headers = apiKey ? { "X-API-Key": apiKey } : undefined;
+    setMetrics({});
+    setTopEvents([]);
     setLoading(true);
     Promise.all([
       fetch(`${API}/analytics/metrics`, { headers, signal: controller.signal }).then((response) => {

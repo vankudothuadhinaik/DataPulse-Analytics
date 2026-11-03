@@ -1,15 +1,15 @@
 # Deployment readiness checklist
 
-DataPulse is a demo analytics service. The current application calls SQLAlchemy `Base.metadata.create_all` at startup; this is convenient for local development but is not a versioned schema migration strategy for production.
+DataPulse is a demo analytics service. Automatic SQLAlchemy `Base.metadata.create_all` is disabled by default; the local Compose demo explicitly opts in with `DATAPULSE_AUTO_CREATE_TABLES=true`. This is not a versioned schema migration strategy for production.
 
 ## Required before production deployment
 
 - Apply the versioned Alembic migration (`alembic upgrade head`) as a controlled release step, not independently in every API worker.
-- Keep automatic `Base.metadata.create_all` limited to development/test environments; production startup must not silently mutate schema.
+- Keep `DATAPULSE_AUTO_CREATE_TABLES` disabled outside the local demo; production startup must not silently mutate schema.
 - CI applies the initial migration to PostgreSQL 16 and runs `alembic check`; endpoint tests still use SQLite, so this does not replace full PostgreSQL API integration coverage.
 - Keep `/health` as a liveness check and `/health/ready` as a dependency-aware readiness check.
 - Configure explicit CORS origins per environment; do not use wildcard origins with credentials.
-- Add authentication and authorization before exposing ingestion or analytics endpoints to untrusted clients.
+- Configure `DATAPULSE_API_KEY` as a secret and set `ENVIRONMENT=production` before exposing ingestion or analytics routes. The current shared API key is a service-level gate, not per-user identity or role-based authorization.
 - Define retention, deletion, and access-control policies before storing real user/event data.
 - Add request-size limits, rate limits, structured logs, and metrics for ingestion failures.
 - Use secret-managed database credentials and verify backups/restore procedures.

@@ -222,3 +222,43 @@ def test_cors_does_not_reflect_unconfigured_origin():
     )
 
     assert "access-control-allow-origin" not in response.headers
+
+
+
+def test_event_ingestion_rolls_back_and_returns_safe_error(monkeypatch):
+    state = {"rolled_back": False}
+    monkeypatch.delenv("DATAPULSE_API_KEY", raising=False)
+    monkeypatch.setenv("ENVIRONMENT", "development")
+
+    class FailingSession:
+        def add(self, _obj):
+            pass
+
+        def commit(self):
+            raise SQLAlchemyError("internal database details")
+
+        def rollback(self):
+            state["rolled_back"] = True
+
+    def failing_db():
+        yield FailingSession()
+
+    app.dependency_overrides[get_db] = failing_db
+    try:
+        response = client.post(
+            "/events",
+            json={
+                "event_name": "purchase",
+                "user_id": "user-1",
+                "session_id": "session-1",
+            },
+        )
+    finally:
+        app.dependency_overrides[get_db] = override_get_db
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Event could not be persisted; please retry."
+    }
+    assert state["rolled_back"] is True
+    assert "internal database details" not in response.text

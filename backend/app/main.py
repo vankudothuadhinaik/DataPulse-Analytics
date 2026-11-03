@@ -49,9 +49,9 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-API-Key"],
 )
 
-# Keep automatic schema creation local-only. Production schema changes must be
-# applied by the release migration step (alembic upgrade head), not each API worker.
-if os.getenv("ENVIRONMENT", "development").strip().lower() not in {"production", "prod"}:
+# Explicit opt-in for the local Compose demo only. Production schema changes
+# must be applied by the release migration step (alembic upgrade head).
+if os.getenv("DATAPULSE_AUTO_CREATE_TABLES", "").strip().lower() == "true":
     Base.metadata.create_all(bind=engine)
 
 
@@ -76,9 +76,16 @@ def readiness(db: Session = Depends(get_db)):
 @app.post("/events", status_code=201, dependencies=[Depends(require_api_key)])
 def ingest(event: EventIn, db: Session = Depends(get_db)) -> dict[str, int]:
     obj = Event(**event.model_dump(exclude_none=True))
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
+    try:
+        db.add(obj)
+        db.commit()
+        db.refresh(obj)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Event could not be persisted; please retry.",
+        ) from exc
     return {"id": obj.id}
 
 

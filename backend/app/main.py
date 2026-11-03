@@ -49,9 +49,9 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-API-Key"],
 )
 
-# Keep automatic schema creation local-only. Production schema changes must be
-# applied by the release migration step (alembic upgrade head), not each API worker.
-if os.getenv("ENVIRONMENT", "development").strip().lower() not in {"production", "prod"}:
+# Explicit opt-in for the local Compose demo only. Production schema changes
+# must be applied by the release migration step (alembic upgrade head).
+if os.getenv("DATAPULSE_AUTO_CREATE_TABLES", "").strip().lower() == "true":
     Base.metadata.create_all(bind=engine)
 
 

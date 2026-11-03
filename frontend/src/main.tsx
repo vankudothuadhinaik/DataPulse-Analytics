@@ -8,16 +8,21 @@ const API = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").repla
 function App() {
   const [metrics, setMetrics] = useState<any>({});
   const [topEvents, setTopEvents] = useState<any[]>([]);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
+    const headers = apiKey ? { "X-API-Key": apiKey } : undefined;
+    setLoading(true);
     Promise.all([
-      fetch(`${API}/analytics/metrics`, { signal: controller.signal }).then((response) => {
+      fetch(`${API}/analytics/metrics`, { headers, signal: controller.signal }).then((response) => {
         if (!response.ok) throw new Error(`Metrics request failed (${response.status})`);
         return response.json();
       }),
-      fetch(`${API}/analytics/top-events`, { signal: controller.signal }).then((response) => {
+      fetch(`${API}/analytics/top-events`, { headers, signal: controller.signal }).then((response) => {
         if (!response.ok) throw new Error(`Top events request failed (${response.status})`);
         return response.json();
       }),
@@ -28,10 +33,20 @@ function App() {
         setError("");
       })
       .catch((cause) => {
-        if (cause.name !== "AbortError") setError("Could not load analytics. Check that the API is running.");
+        if (cause.name !== "AbortError") {
+          setError("Could not load analytics. Check the API address and API key.");
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [apiKey]);
+
+  function connectDashboard(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setApiKey(apiKeyInput.trim());
+  }
 
   return (
     <main>
@@ -40,6 +55,21 @@ function App() {
         <span>{error ? "● API unavailable" : "● Analytics dashboard"}</span>
       </header>
       {error && <p role="alert" className="error-message">{error}</p>}
+      <form className="api-key-form" onSubmit={connectDashboard}>
+        <label htmlFor="api-key">API key <small>(only required when API authentication is enabled)</small></label>
+        <input
+          id="api-key"
+          type="password"
+          autoComplete="off"
+          value={apiKeyInput}
+          onChange={(event) => setApiKeyInput(event.target.value)}
+          placeholder="Enter the API key if required"
+        />
+        <button type="submit" disabled={loading}>
+          {loading ? "Loading…" : "Connect / refresh"}
+        </button>
+        <small>The key stays in this browser session and is not saved to local storage or bundled into the app.</small>
+      </form>
       <section className="cards">
         {[
           ["Events", metrics.events ?? 0],

@@ -23,7 +23,7 @@ Interactive API documentation is available at `/docs` when the backend is runnin
 - Docker Compose for local services
 - Pytest and GitHub Actions for backend endpoint and validation tests
 
-Redis is included in the local Compose environment and configured through `REDIS_URL`, but the current API code does not yet use Redis for caching, queues, or analytics. The API supports a shared API key for event ingestion and analytics routes; this is a simple service-level gate, not user identity, role-based authorization, or a full account system. Versioned Alembic migrations are provided for the `events` schema; production must apply them as a release step before starting the API, and the API no longer runs `create_all` when `ENVIRONMENT=production` or `prod`. Ingestion rate limiting and full user authorization remain future work. The readiness endpoint is a dependency check, not a deployment-readiness guarantee.
+Redis is included in the local Compose environment and configured through `REDIS_URL`, but the current API code does not yet use Redis for caching, queues, or analytics. The API supports a shared API key for event ingestion and analytics routes; this is a simple service-level gate, not user identity, role-based authorization, or a full account system. Versioned Alembic migrations are provided for the `events` schema; production must apply them as a release step before starting the API. Automatic table creation is disabled by default and enabled only when `DATAPULSE_AUTO_CREATE_TABLES=true`. Ingestion rate limiting and full user authorization remain future work. The readiness endpoint is a dependency check, not a deployment-readiness guarantee.
 
 ## Run locally
 
@@ -33,6 +33,8 @@ Copy the environment template and start the stack:
 cp .env.example .env
 docker compose up --build
 ```
+
+The local Compose configuration opts into demo table creation with `DATAPULSE_AUTO_CREATE_TABLES=true`. Disable this flag for hosted deployments and apply Alembic migrations as a release step instead.
 
 Open the dashboard at http://localhost:5173 and the API docs at http://localhost:8000/docs.
 

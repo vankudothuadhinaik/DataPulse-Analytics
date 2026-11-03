@@ -76,9 +76,16 @@ def readiness(db: Session = Depends(get_db)):
 @app.post("/events", status_code=201, dependencies=[Depends(require_api_key)])
 def ingest(event: EventIn, db: Session = Depends(get_db)) -> dict[str, int]:
     obj = Event(**event.model_dump(exclude_none=True))
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
+    try:
+        db.add(obj)
+        db.commit()
+        db.refresh(obj)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Event could not be persisted; please retry.",
+        ) from exc
     return {"id": obj.id}
 
 

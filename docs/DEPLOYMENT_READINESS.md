@@ -9,7 +9,7 @@ DataPulse is a demo analytics service. The current application calls SQLAlchemy 
 - CI applies the initial migration to PostgreSQL 16 and runs `alembic check`; endpoint tests still use SQLite, so this does not replace full PostgreSQL API integration coverage.
 - Keep `/health` as a liveness check and `/health/ready` as a dependency-aware readiness check.
 - Configure explicit CORS origins per environment; do not use wildcard origins with credentials.
-- Add authentication and authorization before exposing ingestion or analytics endpoints to untrusted clients.
+- Configure `DATAPULSE_API_KEY` as a secret and set `ENVIRONMENT=production` before exposing ingestion or analytics routes. The current shared API key is a service-level gate, not per-user identity or role-based authorization.
 - Define retention, deletion, and access-control policies before storing real user/event data.
 - Add request-size limits, rate limits, structured logs, and metrics for ingestion failures.
 - Use secret-managed database credentials and verify backups/restore procedures.
